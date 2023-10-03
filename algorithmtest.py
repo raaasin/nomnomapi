@@ -1,7 +1,7 @@
 import pandas as pd
 import json
 
-# Load restaurant data from CSV
+# Load data from the combined CSV file
 df = pd.read_csv('restaurants.csv')
 
 # Cuisines known to be spicy
@@ -59,10 +59,21 @@ def recommend_restaurants(dietary_preference, mood, budget, aesthetics, diet):
     # Sort restaurants by rating in descending order
     sorted_df = filtered_df.sort_values(by='Rating', ascending=False)
 
-    # Extract and return top 3 rated restaurant names and ratings
-    recommendations = sorted_df[['Restaurant', 'Rating']].head(3).values.tolist()
+    # Extract and return top 3 rated restaurant details
+    recommendations = []
+    for _, row in sorted_df.iterrows():
+        restaurant_data = {
+            "Restaurant": row['Restaurant'],
+            "Rating": row['Rating'],
+            "URL": row['url'],
+            "ImageURL": row['pic']
+        }
+        recommendations.append(restaurant_data)
 
-    return recommendations
+    if len(recommendations) > 3:
+        return recommendations[:3]
+    else:
+        return recommendations
 
 # Example usage:
 dietary_preference = 'Nonveg'  # 'Nonveg' or 'Veg'
