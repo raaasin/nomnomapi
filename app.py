@@ -1,67 +1,102 @@
-import numpy as np
 from flask import Flask, request, jsonify
-from sklearn.neighbors import NearestNeighbors
 import pandas as pd
+import json
 
 app = Flask(__name__)
 
-# Load the restaurant data from your CSV file
-data = pd.read_csv('restaurants.csv')
+# Load data from the combined CSV file
+df = pd.read_csv('vizag.csv')
 
-# Dictionary to map categorical values to numerical labels
-category_mapping = {
-    'Cheap': 0,
-    'Medium': 1,
-    'Expensive': 2,
-    'Aesthetic': 0,
-    'Good': 1,
-    'Normal': 2,
-    'Non-vegetarian': 1,  # Updated mapping for 'Non-vegetarian' to 1
-    'Vegetarian': 2,
-    'Fast Food': 0,
-    'Healthy': 1,
-    'Moderate': 2
-}
+# Cuisines known to be spicy
+spicy_cuisines = ['Asian', 'Mexican', 'Indian']
+
+# Cuisines known to be sweet
+sweet_cuisines = ['Bakery', 'Cafe']
+
+# Function to recommend restaurants based on user input
+def recommend_restaurants(dietary_preference, mood, budget, aesthetics, diet):
+    # Filter restaurants based on dietary preference
+    if dietary_preference == 'Nonveg':
+        filtered_df = df[(df['Type'] == 'Both') | (df['Type'] == 'Non-vegetarian')]
+    elif dietary_preference == 'Veg':
+        filtered_df = df[df['Type'] == 'Vegetarian']
+    else:
+        return {"error": "Invalid dietary preference. Use 'Nonveg' or 'Veg'."}
+
+    # Filter restaurants based on mood
+    if mood == 'Happy':
+        mood_cuisines = spicy_cuisines
+    elif mood == 'Sad':
+        mood_cuisines = sweet_cuisines
+    elif mood == 'Unsure':
+        # When unsure, recommend both spicy and sweet cuisines
+        mood_cuisines = spicy_cuisines + sweet_cuisines
+    else:
+        return {"error": "Invalid mood. Use 'Happy', 'Sad', or 'Unsure'."}
+
+    filtered_df = filtered_df[filtered_df['Cuisine'].isin(mood_cuisines)]
+
+    # Filter restaurants based on budget
+    filtered_df = filtered_df[filtered_df['Budget'] == budget]
+
+    # Filter restaurants based on diet preference
+    if diet == 'Moderate':
+        filtered_df = filtered_df
+    elif diet == 'Fast Food':
+        filtered_df = filtered_df[filtered_df['Diet'] == 'Fast Food']
+    elif diet == 'Healthy':
+        filtered_df = filtered_df[filtered_df['Diet'] == 'Healthy']
+    else:
+        return {"error": "Invalid diet preference. Use 'Moderate', 'Fast Food', or 'Healthy'."}
+
+    # Filter restaurants based on aesthetics
+    if aesthetics == 'Normal':
+        filtered_df = filtered_df
+    elif aesthetics == 'Good':
+        filtered_df = filtered_df[(filtered_df['Aesthetics'] == 'Normal') | (filtered_df['Aesthetics'] == 'Good')]
+    elif aesthetics == 'Aesthetic':
+        filtered_df = filtered_df[filtered_df['Aesthetics'] == 'Aesthetic']
+    else:
+        return {"error": "Invalid aesthetics preference. Use 'Normal', 'Good', or 'Aesthetic'."}
+
+    # Sort restaurants by rating in descending order
+    sorted_df = filtered_df.sort_values(by='Rating', ascending=False)
+
+    # Extract and return top 3 rated restaurant details
+    recommendations = []
+    for _, row in sorted_df.iterrows():
+        restaurant_data = {
+            "Restaurant": row['Restaurant'],
+            "Rating": row['Rating'],
+            "URL": row['url'],
+            "ImageURL": row['pic']
+        }
+        recommendations.append(restaurant_data)
+
+    if len(recommendations) > 3:
+        return recommendations[:3]
+    else:
+        return recommendations
 
 @app.route('/api/recommendations', methods=['GET'])
 def get_recommendations():
     try:
-        mood = int(request.args.get('mood'))
-        budget = int(request.args.get('budget'))
-        aesthetics = int(request.args.get('aesthetics'))
-        type = int(request.args.get('type'))
-        diet = int(request.args.get('diet'))
+        dietary_preference = request.args.get('dietary_preference')
+        mood = request.args.get('mood')
+        budget = request.args.get('budget')
+        aesthetics = request.args.get('aesthetics')
+        diet = request.args.get('diet')
 
-        # Added a dietary_preference parameter to specify 'Nonveg' or 'Veg'
-        dietary_preference = request.args.get('dietary_preference')  # 'Nonveg' or 'Veg'
-
-        user_profile = np.array([budget, aesthetics, type, diet])
-
-        # Map categorical values to numerical labels
-        user_profile = np.array([category_mapping.get(category, 0) for category in user_profile])
-
-        # Filter the dataset based on dietary preference and dietary restrictions
-        if dietary_preference == 'Nonveg':
-            # Include restaurants that are 'Non-vegetarian' or 'Both'
-            filtered_data = data[(data['Diet'] == 'Non-vegetarian') | (data['Diet'] == 'Both')]
-        elif dietary_preference == 'Veg':
-            filtered_data = data[data['Diet'] == 'Vegetarian']
+        recommendations = recommend_restaurants(dietary_preference, mood, budget, aesthetics, diet)
+        
+        if isinstance(recommendations, list):
+            if len(recommendations) > 0:
+                return jsonify(recommendations)
+            else:
+                return jsonify({"message": "No recommendations available."})
         else:
-            return jsonify({"error": "Invalid dietary_preference. Use 'Nonveg' or 'Veg'."})
+            return jsonify(recommendations)
 
-        # Create a KNN model
-        knn_model = NearestNeighbors(n_neighbors=3, metric='cosine')
-        knn_model.fit(filtered_data[['Budget', 'Aesthetics', 'Type', 'Diet']])
-
-        # Calculate cosine similarity
-        user_profile = user_profile.reshape(1, -1)  # Reshape for compatibility
-        content_similarities, top_recommend_indices = knn_model.kneighbors(user_profile)
-
-        # Get top recommended restaurants based on similarity
-        recommended_restaurants = [filtered_data.iloc[idx]['Restaurant'] for idx in top_recommend_indices[0]]
-
-        # Return recommendations
-        return jsonify({"recommendations": recommended_restaurants})
     except Exception as e:
         return jsonify({"error": str(e)})
 

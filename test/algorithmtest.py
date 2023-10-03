@@ -1,13 +1,9 @@
 import pandas as pd
 import json
 
-# Load data from the combined CSV file
-df = pd.read_csv('restaurants.csv')
 
-# Cuisines known to be spicy
+df = pd.read_csv('vizag.csv')
 spicy_cuisines = ['Asian', 'Mexican', 'Indian']
-
-# Cuisines known to be sweet
 sweet_cuisines = ['Bakery', 'Cafe']
 
 # Function to recommend restaurants based on user input
@@ -75,12 +71,13 @@ def recommend_restaurants(dietary_preference, mood, budget, aesthetics, diet):
     else:
         return recommendations
 
-# Example usage:
 dietary_preference = 'Nonveg'  # 'Nonveg' or 'Veg'
 mood = 'Unsure'  # 'Happy', 'Sad', or 'Unsure'
 budget = 'Medium'  # 'Cheap', 'Medium', or 'Expensive'
 aesthetics = 'Aesthetic'  # 'Normal', 'Good', or 'Aesthetic'
 diet = 'Moderate'  # 'Moderate', 'Fast Food', or 'Healthy'
+loc = 'vizag' #location of the user
+
 
 recommendations = recommend_restaurants(dietary_preference, mood, budget, aesthetics, diet)
 if isinstance(recommendations, list):

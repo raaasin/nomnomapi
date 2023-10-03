@@ -1,19 +1,22 @@
 import requests
 
-url = 'http://127.0.0.1:5000/api/recommendations'
+# Define the API URL and query parameters
+url = 'http://localhost:5000/api/recommendations'
 params = {
-    'mood': 1,
-    'budget': 0,
-    'aesthetics': 1,
-    'type': 0,
-    'diet': 1,
-    'dietary_preference': 'Nonveg'  # Specify 'Nonveg' or 'Veg' here
+    'dietary_preference': 'Veg', # 'Nonveg' or 'Veg'
+    'mood': 'Unsure',  # 'Happy', 'Sad', or 'Unsure'
+    'budget': 'Medium', # 'Cheap', 'Medium', or 'Expensive'
+    'aesthetics': 'Good', # 'Normal', 'Good', or 'Aesthetic'
+    'diet': 'Moderate'  # 'Moderate', 'Fast Food', or 'Healthy'
 }
-
 response = requests.get(url, params=params)
 
+# Check the response status code
 if response.status_code == 200:
     recommendations = response.json()
-    print(recommendations)
+    if recommendations:
+        print(recommendations)
+    else:
+        print("No recommendations available.")
 else:
     print('Error:', response.status_code, response.text)
