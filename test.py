@@ -1,6 +1,6 @@
 import requests
 
-url = 'http://localhost:5000/api/recommendations'
+url = 'http://raaasin.pythonanywhere.com/api/recommendations'
 params = {
     'mood': 1,
     'budget': 0,
