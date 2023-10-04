@@ -11,5 +11,6 @@ response = requests.get(url, params=params)
 
 if response.status_code == 200:
     recommendations = response.json()
+    print(recommendations)
 else:
     print('Error:', response.status_code, response.text)
